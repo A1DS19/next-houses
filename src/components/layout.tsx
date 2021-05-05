@@ -1,5 +1,6 @@
 import React, { FunctionComponent, ReactNode, useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from 'src/auth/useAuth';
 //import { useAuth } from "src/auth/useAuth";
 
 interface layoutProps {
@@ -7,11 +8,7 @@ interface layoutProps {
 }
 
 export const Layout: React.FC<layoutProps> = ({ main }): JSX.Element => {
-  const [authenticated, setAuthenticated] = useState(false);
-
-  const logout = (): Boolean => {
-    return true;
-  };
+  const { authenticated, user, logout } = useAuth();
 
   return (
     <div className='bg-gray-900 max-w-screen-2xl mx-auto text-white'>
