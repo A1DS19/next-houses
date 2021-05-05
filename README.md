@@ -1,3 +1,3 @@
 # Houses
 
-### Next.js, TypeScript, GraphQl, Prisma, PostgreSQL, Firebase Auth
+### Next.js, TypeScript, GraphQL, Prisma, PostgreSQL, Firebase Auth
