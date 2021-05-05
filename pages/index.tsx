@@ -1,5 +1,5 @@
 import { Layout } from '../src/components/layout';
 
-export default function Home() {
-  return <Layout main={<div>Home</div>} />
+export default function Home(): JSX.Element {
+  return <Layout main={<div>Home</div>} />;
 }
