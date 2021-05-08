@@ -1,5 +1,6 @@
 import { Layout } from '../src/components/layout';
 import { Map } from 'src/components/map';
+import { useQuery, gql } from '@apollo/client';
 
 function Home(): JSX.Element {
   return (
