@@ -7,15 +7,7 @@ import Link from 'next/link';
 import { Image } from 'cloudinary-react';
 import { SearchBox } from './searchBox';
 import { CreateSignatureMutation } from 'src/generated/CreateSignatureMutation';
-// import {
-//   CreateHouseMutation,
-//   CreateHouseMutationVariables,
-// } from "src/generated/CreateHouseMutation";
-// import {
-//   UpdateHouseMutation,
-//   UpdateHouseMutationVariables,
-// } from "src/generated/UpdateHouseMutation";
-// import { CreateSignatureMutation } from "src/generated/CreateSignatureMutation";
+import { CreateHouse, CreateHouseVariables } from 'src/generated/CreateHouse';
 
 interface IFormData {
   address: string;
@@ -40,14 +32,26 @@ const SIGNATURE_MUTATION = gql`
   }
 `;
 
+const CREATE_HOUSE_MUTATION = gql`
+  mutation CreateHouse($input: HouseInput!) {
+    createHouse(input: $input) {
+      id
+    }
+  }
+`;
+
 export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
   const [createSignature] = useMutation<CreateSignatureMutation>(SIGNATURE_MUTATION);
+  const [createHouse] = useMutation<CreateHouse, CreateHouseVariables>(
+    CREATE_HOUSE_MUTATION
+  );
   const [submitting, setSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const { register, handleSubmit, setValue, errors, watch } = useForm<IFormData>({
     defaultValues: {},
   });
   const address = watch('address');
+  const router = useRouter();
 
   useEffect(() => {
     register({ name: 'address' }, { required: 'Porfavor inserte su direccion' });
@@ -66,6 +70,24 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
     if (signatureData) {
       const { signature, timestamp } = signatureData.createImageSignature;
       const { secure_url } = await uploadImage(data.image[0], signature, timestamp);
+      const { data: houseData } = await createHouse({
+        variables: {
+          input: {
+            address: data.address,
+            image: secure_url,
+            coordinates: {
+              latitude: data.latitude,
+              longitude: data.longitude,
+            },
+            bedrooms: parseInt(data.bedrooms),
+          },
+        },
+      });
+      if (houseData?.createHouse) {
+        router.push(`/houses/${houseData.createHouse.id}`);
+      } else {
+        alert('No Funciono lmao');
+      }
     }
   };
 
@@ -166,16 +188,22 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
           </div>
 
           <div className='mt-4'>
-            <button
-              type='submit'
-              className='bg-blue-500 hover:bg-blue-700 font-bold py-2 px-2 rounded mr-2'
-              disabled={submitting}
-            >
-              Submit
-            </button>
-            <Link href='/'>
-              <a>Cancelar</a>
-            </Link>
+            {!submitting ? (
+              <>
+                <button
+                  type='submit'
+                  className='bg-blue-500 hover:bg-blue-700 font-bold py-2 px-2 rounded mr-2'
+                  disabled={submitting}
+                >
+                  Submit
+                </button>
+                <Link href='/'>
+                  <a>Cancelar</a>
+                </Link>
+              </>
+            ) : (
+              <h1>Insertando datos...</h1>
+            )}
           </div>
         </>
       )}
