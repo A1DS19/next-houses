@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Image } from 'cloudinary-react';
 import { SearchBox } from './searchBox';
+import { CreateSignatureMutation } from 'src/generated/CreateSignatureMutation';
 // import {
 //   CreateHouseMutation,
 //   CreateHouseMutationVariables,
@@ -24,9 +25,23 @@ interface IFormData {
   image: FileList;
 }
 
+interface IUploadImageResponse {
+  secure_url: string;
+}
+
 interface IProps {}
 
+const SIGNATURE_MUTATION = gql`
+  mutation CreateSignatureMutation {
+    createImageSignature {
+      signature
+      timestamp
+    }
+  }
+`;
+
 export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
+  const [createSignature] = useMutation<CreateSignatureMutation>(SIGNATURE_MUTATION);
   const [submitting, setSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const { register, handleSubmit, setValue, errors, watch } = useForm<IFormData>({
@@ -46,7 +61,32 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
   };
 
   const handleCreate = async (data: IFormData) => {
-    console.log(data);
+    const { data: signatureData } = await createSignature();
+
+    if (signatureData) {
+      const { signature, timestamp } = signatureData.createImageSignature;
+      const { secure_url } = await uploadImage(data.image[0], signature, timestamp);
+    }
+  };
+
+  const uploadImage = async (
+    image: File,
+    signature: string,
+    timestamp: number
+  ): Promise<IUploadImageResponse> => {
+    const url = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`;
+    const formData = new FormData();
+    formData.append('file', image);
+    formData.append('signature', signature);
+    formData.append('timestamp', timestamp.toString());
+    formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_KEY);
+
+    const res = await fetch(url, {
+      method: 'post',
+      body: formData,
+    });
+
+    return res.json();
   };
 
   return (

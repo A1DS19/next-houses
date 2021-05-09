@@ -9,15 +9,15 @@ function MyApp({ Component, pageProps }: AppProps): JSX.Element {
   const client = useApollo();
 
   return (
-    <AuthProvider>
-      <ApolloProvider client={client}>
+    <ApolloProvider client={client}>
+      <AuthProvider>
         <Head>
           <title>Casas Home</title>
           <link rel='shortcut icon' href='/favicon.ico' type='image/x-icon' />
         </Head>
         <Component {...pageProps} />
-      </ApolloProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ApolloProvider>
   );
 }
 

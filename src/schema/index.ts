@@ -1,18 +1,18 @@
 import { buildSchemaSync, Mutation, Query, Resolver } from 'type-graphql';
-// import { ImageResolver } from "./image";
 // import { HouseResolver } from "./house";
 import { authChecker } from './auth';
+import { ImageResolver } from './image';
 
 @Resolver()
 class Dummy {
   @Query(() => String)
-  hello() {
-    return 'hello';
+  hello(): String {
+    return 'Hello';
   }
 }
 
 export const schema = buildSchemaSync({
-  resolvers: [Dummy],
+  resolvers: [ImageResolver, Dummy],
   emitSchemaFile: process.env.NODE_ENV === 'development',
   authChecker,
 });
