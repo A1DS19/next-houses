@@ -64,6 +64,9 @@ class House {
   @Field(() => String)
   image!: string;
 
+  @Field(() => Float)
+  bedrooms!: number;
+
   @Field(() => String)
   publicId?(): string {
     const parts = this.image.split('/');
@@ -71,8 +74,28 @@ class House {
     return parts[parts.length - 1];
   }
 
-  @Field(() => Float)
-  bedrooms!: number;
+  @Field(() => [House], { nullable: true })
+  async nearby?(@Ctx() ctx: Context) {
+    //Crea caja de 15km cuadrados alrededor de casa actual para
+    //extraer casas cercanas.
+    const bounds = getBoundsOfDistance(
+      {
+        latitude: this.latitude,
+        longitude: this.longitude,
+      },
+      15000
+    );
+
+    //Devuelve las 25 casas mas cercanas a la casa original
+    return ctx.prisma.house.findMany({
+      where: {
+        latitude: { gte: bounds[0].latitude, lte: bounds[1].latitude },
+        longitude: { gte: bounds[0].longitude, lte: bounds[1].longitude },
+        id: { not: { equals: this.id } },
+      },
+      take: 25,
+    });
+  }
 }
 
 @Resolver(House)
@@ -93,5 +116,13 @@ export class HouseResolver {
         bedrooms: input.bedrooms,
       },
     });
+  }
+
+  @Query(() => House, { nullable: true })
+  async fetchHouse(
+    @Arg('houseId') houseId: string,
+    @Ctx() ctx: Context
+  ): Promise<House | null> {
+    return await ctx.prisma.house.findOne({ where: { id: parseInt(houseId, 10) } });
   }
 }
