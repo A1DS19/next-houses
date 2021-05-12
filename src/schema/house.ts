@@ -30,6 +30,17 @@ class CoordinatesInput {
 }
 
 @InputType()
+class BoundsInput {
+  @Field(() => CoordinatesInput)
+  //southWest
+  sw!: CoordinatesInput;
+
+  @Field(() => CoordinatesInput)
+  //northEast
+  ne!: CoordinatesInput;
+}
+
+@InputType()
 class HouseInput {
   @Field(() => String)
   address!: string;
@@ -123,6 +134,22 @@ export class HouseResolver {
     @Arg('houseId') houseId: string,
     @Ctx() ctx: Context
   ): Promise<House | null> {
-    return await ctx.prisma.house.findOne({ where: { id: parseInt(houseId, 10) } });
+    return await ctx.prisma.house.findFirst({ where: { id: parseInt(houseId, 10) } });
+  }
+
+  @Query(() => [House], { nullable: true })
+  async fetchHouses(
+    @Arg('bounds') bounds: BoundsInput,
+    @Ctx() ctx: Context
+  ): Promise<House[] | null> {
+    await ctx.prisma.house.findMany();
+
+    return await ctx.prisma.house.findMany({
+      where: {
+        latitude: { gte: bounds.sw.latitude, lte: bounds.ne.latitude },
+        longitude: { gte: bounds.sw.longitude, lte: bounds.ne.longitude },
+      },
+      take: 50,
+    });
   }
 }

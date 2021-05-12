@@ -50,7 +50,9 @@ const HouseData = (props: { id: string }): JSX.Element | null => {
     { variables: { houseId: props.id } }
   );
 
-  if (loading || !data) return <Layout main={<div>Cargando...</div>} />;
+  if (loading) return <Layout main={<div>Cargando...</div>} />;
+
+  if (!data) return <Layout main={<div>No hay datos.</div>} />;
 
   if (!data.fetchHouse) return <Layout main={<div>No hay datos</div>} />;
 
