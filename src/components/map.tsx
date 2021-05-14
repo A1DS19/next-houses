@@ -6,14 +6,21 @@ import ReactMapGL, { MapRef, Marker, Popup } from 'react-map-gl';
 import { ViewState } from 'react-map-gl/src/mapbox/mapbox';
 import { useLocalState } from 'src/utils/useLocalState';
 import { houses_fetchHouses } from 'src/generated/houses';
-// import { SearchBox } from './searchBox';
+import { SearchBox } from './searchBox';
 
 interface IMap {
   setDataBounds: (bounds: string) => void;
   houses: houses_fetchHouses[] | null;
+  highligthtedId: string | null;
+  setHighligthtedId: (houseId: string | null) => void;
 }
 
-export const Map: FunctionComponent<IMap> = ({ setDataBounds, houses }): JSX.Element => {
+export const Map: FunctionComponent<IMap> = ({
+  setDataBounds,
+  houses,
+  highligthtedId,
+  setHighligthtedId,
+}): JSX.Element => {
   const mapRef = useRef<MapRef | null>(null);
   const [viewport, setViewport] = useLocalState<ViewState>('viewport', {
     latitude: 9.74,
@@ -52,6 +59,25 @@ export const Map: FunctionComponent<IMap> = ({ setDataBounds, houses }): JSX.Ele
           }
         }}
       >
+        <div className='absolute top-0 w-full z-10 p-4'>
+          <SearchBox
+            defaultValue=''
+            onSelectAdress={(_address, latitude, longitude) => {
+              if (latitude && longitude) {
+                setViewport((oldState) => ({
+                  ...oldState,
+                  latitude,
+                  longitude,
+                  zoom: 12,
+                }));
+                if (mapRef.current) {
+                  const bounds = mapRef.current.getMap().getBounds();
+                  setDataBounds(JSON.stringify(bounds.toArray()));
+                }
+              }
+            }}
+          />
+        </div>
         {houses?.map((house) => (
           <Marker
             key={house.id}
@@ -59,12 +85,19 @@ export const Map: FunctionComponent<IMap> = ({ setDataBounds, houses }): JSX.Ele
             longitude={house.longitude}
             offsetLeft={-15}
             offsetTop={-15}
+            className={highligthtedId === house.id ? 'marker-active' : ''}
           >
             <button
               onClick={() => setSelectedHouse(house)}
               style={{ width: '30px', height: '30px', fontSize: '30px' }}
             >
-              <img src='/home-solid.svg' alt='casas adyacentes' className='w-8' />
+              <img
+                src={highligthtedId === house.id ? '/home-color.svg' : '/home-solid.svg'}
+                alt='casas adyacentes'
+                className='w-8'
+                onMouseEnter={() => setHighligthtedId(house.id)}
+                onMouseLeave={() => setHighligthtedId(null)}
+              />
             </button>
           </Marker>
         ))}

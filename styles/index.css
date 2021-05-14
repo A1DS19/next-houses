@@ -28,3 +28,8 @@ input {
 .marker-active {
   z-index: 1;
 }
+
+.house-list-item-active {
+  margin: 10px;
+  border: 2px solid whitesmoke;
+}
