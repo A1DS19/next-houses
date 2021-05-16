@@ -8,7 +8,7 @@
 // ====================================================
 
 export interface EditHouse_fetchHouse {
-  __typename: 'House';
+  __typename: "House";
   id: string;
   userId: string;
   address: string;
