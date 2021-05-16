@@ -8,6 +8,7 @@ import { Image } from 'cloudinary-react';
 import { SearchBox } from './searchBox';
 import { CreateSignatureMutation } from 'src/generated/CreateSignatureMutation';
 import { CreateHouse, CreateHouseVariables } from 'src/generated/CreateHouse';
+import { UpdateHouse, UpdateHouseVariables } from 'src/generated/UpdateHouse';
 
 interface IFormData {
   address: string;
@@ -17,11 +18,23 @@ interface IFormData {
   image: FileList;
 }
 
+interface IHouse {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  bedrooms: number;
+  image: string;
+  publicId: string;
+}
+
 interface IUploadImageResponse {
   secure_url: string;
 }
 
-interface IProps {}
+interface IProps {
+  house?: IHouse;
+}
 
 const SIGNATURE_MUTATION = gql`
   mutation CreateSignatureMutation {
@@ -40,15 +53,40 @@ const CREATE_HOUSE_MUTATION = gql`
   }
 `;
 
-export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
+const UPDATE_HOUSE_MUTATION = gql`
+  mutation UpdateHouse($id: String!, $input: HouseInput!) {
+    updateHouse(id: $id, input: $input) {
+      id
+      userId
+      image
+      publicId
+      address
+      bedrooms
+      latitude
+      longitude
+    }
+  }
+`;
+
+export const HouseForm: FunctionComponent<IProps> = ({ house }): JSX.Element => {
   const [createSignature] = useMutation<CreateSignatureMutation>(SIGNATURE_MUTATION);
   const [createHouse] = useMutation<CreateHouse, CreateHouseVariables>(
     CREATE_HOUSE_MUTATION
   );
+  const [updateHouse] = useMutation<UpdateHouse, UpdateHouseVariables>(
+    UPDATE_HOUSE_MUTATION
+  );
   const [submitting, setSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const { register, handleSubmit, setValue, errors, watch } = useForm<IFormData>({
-    defaultValues: {},
+    defaultValues: house
+      ? {
+          address: house.address,
+          latitude: house.latitude,
+          longitude: house.longitude,
+          bedrooms: house.bedrooms.toString(),
+        }
+      : {},
   });
   const address = watch('address');
   const router = useRouter();
@@ -61,7 +99,12 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
 
   const onSubmit = (data: IFormData) => {
     setSubmitting(true);
-    handleCreate(data);
+    if (house) {
+      handleUpdate(house, data);
+    } else {
+      handleCreate(data);
+    }
+    setSubmitting(false);
   };
 
   const handleCreate = async (data: IFormData) => {
@@ -91,6 +134,38 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
     }
   };
 
+  const handleUpdate = async (currentHouse: IHouse, data: IFormData) => {
+    let image = currentHouse.image;
+
+    if (data.image[0]) {
+      const { data: signatureData } = await createSignature();
+      if (signatureData) {
+        const { signature, timestamp } = signatureData.createImageSignature;
+        const imageData = await uploadImage(data.image[0], signature, timestamp);
+        image = imageData.secure_url;
+      }
+    }
+
+    const { data: houseData } = await updateHouse({
+      variables: {
+        id: currentHouse.id,
+        input: {
+          address: data.address,
+          image: image,
+          coordinates: {
+            latitude: data.latitude,
+            longitude: data.longitude,
+          },
+          bedrooms: parseInt(data.bedrooms, 10),
+        },
+      },
+    });
+
+    if (houseData?.updateHouse) {
+      router.push(`/houses/${currentHouse.id}`);
+    }
+  };
+
   const uploadImage = async (
     image: File,
     signature: string,
@@ -113,7 +188,7 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
 
   return (
     <form className='mx-auto max-w-xl py-4' onSubmit={handleSubmit(onSubmit)}>
-      <h1>Agregar Nueva Casa</h1>
+      <h1>{house ? `Editando ${house.address} ` : 'Crear Nueva Casa'}</h1>
 
       <div className='mt-3'>
         <label htmlFor='search'>Buscar Direccion de Casa</label>
@@ -123,7 +198,7 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
             setValue('latitude', latitude);
             setValue('longitude', longitude);
           }}
-          defaultValue=''
+          defaultValue={house ? house.address : ''}
         />
         {errors.address && <p>{errors.address.message}</p>}
       </div>
@@ -145,7 +220,7 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
               style={{ display: 'none' }}
               ref={register({
                 validate: (fileList: FileList) => {
-                  if (fileList.length > 0) return true;
+                  if (house || fileList.length > 0) return true;
                   return 'Favor agregue un archivo';
                 },
               })}
@@ -160,13 +235,27 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
                 }
               }}
             />
-            {previewImage && (
+            {previewImage ? (
               <img
                 src={previewImage}
                 className='mt-4 object-cover'
                 style={{ width: '576px', height: `${(9 / 16) * 576}px` }}
               />
-            )}
+            ) : house ? (
+              <Image
+                className='mt-4'
+                cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+                publicId={house.publicId}
+                alt={house.address}
+                secure
+                dpr='auto'
+                quality='auto'
+                width={576}
+                heigth={Math.floor((9 / 16) * 576)}
+                crop='fill'
+                gravity='auto'
+              />
+            ) : null}
             {errors.image && <p>{errors.image.message}</p>}
           </div>
           <div className='mt-4'>
@@ -197,7 +286,7 @@ export const HouseForm: FunctionComponent<IProps> = ({}): JSX.Element => {
                 >
                   Submit
                 </button>
-                <Link href='/'>
+                <Link href={house ? `/houses/${house.id}` : '/'}>
                   <a>Cancelar</a>
                 </Link>
               </>

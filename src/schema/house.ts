@@ -134,7 +134,7 @@ export class HouseResolver {
     @Arg('houseId') houseId: string,
     @Ctx() ctx: Context
   ): Promise<House | null> {
-    return await ctx.prisma.house.findFirst({ where: { id: parseInt(houseId, 10) } });
+    return await ctx.prisma.house.findUnique({ where: { id: parseInt(houseId, 10) } });
   }
 
   @Query(() => [House], { nullable: true })
@@ -150,6 +150,31 @@ export class HouseResolver {
         longitude: { gte: bounds.sw.longitude, lte: bounds.ne.longitude },
       },
       take: 50,
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => House, { nullable: true })
+  async updateHouse(
+    @Arg('id') id: string,
+    @Arg('input') input: HouseInput,
+    @Ctx() ctx: AuthorizedContext
+  ): Promise<House | null> {
+    const houseId = parseInt(id, 10);
+    const house = await ctx.prisma.house.findUnique({ where: { id: houseId } });
+
+    if (!house) return null;
+    if (house.userId !== ctx.uid) return null;
+
+    return await ctx.prisma.house.update({
+      where: { id: houseId },
+      data: {
+        address: input.address,
+        image: input.image,
+        latitude: input.coordinates.latitude,
+        longitude: input.coordinates.longitude,
+        bedrooms: input.bedrooms,
+      },
     });
   }
 }
